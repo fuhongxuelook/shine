@@ -303,6 +303,18 @@ contract FundManager is IFundManager, Pausable, ReentrancyGuard, PaymentGateway,
     ) private {
         IFundAccount fundAccount = IFundAccount(account);
         address positionManager = fundFilter.positionManager();
+        beforeConvert(fundAccount, positionManager, account);
+      
+        address underlyingToken = fundAccount.underlyingToken();
+        
+        convertAsset(paths, underlyingToken, fundAccount, account);
+
+        if (underlyingToken == weth9) {
+            fundAccount.unwrapWETH9();
+        }
+    }
+
+    function beforeConvert(IFundAccount fundAccount, address positionManager, address account) private {
         uint256[] memory tokenIds = lpTokensOfAccount(account);
         for (uint256 i = 0; i < tokenIds.length; i++) {
             (, , , , , , , uint128 liquidity, , , , ) = INonfungiblePositionManager(positionManager).positions(tokenIds[i]);
@@ -332,9 +344,15 @@ contract FundManager is IFundManager, Pausable, ReentrancyGuard, PaymentGateway,
 
             accountClosedPositions[account][tokenIds[i]] = true;
         }
+    }
 
+    function convertAsset(
+        bytes[] calldata paths, 
+        address underlyingToken,
+        IFundAccount fundAccount,
+        address account
+    ) private {
         address swapRouter = fundFilter.swapRouter();
-        address underlyingToken = fundAccount.underlyingToken();
         address[] memory allowedTokens = fundAccount.allowedTokens();
         address allowedToken;
 
@@ -369,10 +387,6 @@ contract FundManager is IFundManager, Pausable, ReentrancyGuard, PaymentGateway,
                 })
             );
             fundAccount.execute(swapRouter, swapCall, 0);
-        }
-
-        if (underlyingToken == weth9) {
-            fundAccount.unwrapWETH9();
         }
     }
 

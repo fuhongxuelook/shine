@@ -107,18 +107,10 @@ contract FundViewer {
         uint256[] memory tokenIds = fundManager.lpTokensOfAccount(data.addr);
 
         lpTokens = new LPToken[](tokenIds.length);
+        uint256 tokenId;
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            uint256 tokenId = tokenIds[i];
-            lpTokens[i].tokenId = tokenId;
-            (
-                lpTokens[i].token0,
-                lpTokens[i].token1,
-                lpTokens[i].fee,
-                lpTokens[i].amount0,
-                lpTokens[i].amount1,
-                lpTokens[i].fee0,
-                lpTokens[i].fee1
-            ) = positionViewer.query(tokenId);
+            tokenId = tokenIds[i];
+            lpTokens[i] = getLpToken(tokenId, positionViewer);
 
             lpTokens[i].amountValue0 = priceOracle.convert(
                 lpTokens[i].token0,
@@ -133,5 +125,18 @@ contract FundViewer {
             lpTokens[i].feeValue0 = priceOracle.convert(lpTokens[i].token0, data.underlyingToken, lpTokens[i].fee0);
             lpTokens[i].feeValue1 = priceOracle.convert(lpTokens[i].token1, data.underlyingToken, lpTokens[i].fee1);
         }
+    }
+
+    function getLpToken(uint256 tokenId, IPositionViewer positionViewer) private view returns (LPToken memory lpt) {
+        lpt.tokenId = tokenId;
+        (
+            lpt.token0,
+            lpt.token1,
+            lpt.fee,
+            lpt.amount0,
+            lpt.amount1,
+            lpt.fee0,
+            lpt.fee1
+        ) = positionViewer.query(tokenId);
     }
 }
